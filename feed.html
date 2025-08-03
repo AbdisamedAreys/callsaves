@@ -1,14 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
-  <meta charset="UTF-8">
-  <title>Social Feed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Social Feed with Likes, Comments & Shares</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for comments */
+    .comments-section::-webkit-scrollbar {
+      width: 6px;
+    }
+    .comments-section::-webkit-scrollbar-thumb {
+      background-color: #888;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen p-4 text-gray-900 dark:text-white">
+
+  <div class="max-w-xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Welcome, <span id="userEmail"></span></h1>
+      <button id="logoutBtn" class="text-blue-500 underline">Logout</button>
+    </div>
+
+    <!-- Post input -->
+    <div class="mb-6">
+      <textarea id="postInput" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="What's on your mind?" rows="3"></textarea>
+      <input type="file" id="imageInput" accept="image/*" class="mt-2" />
+      <button id="postBtn" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Post</button>
+    </div>
+
+    <!-- Posts feed -->
+    <div id="feed"></div>
+  </div>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+    import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
+    // Your Firebase config (replace with yours if different)
     const firebaseConfig = {
       apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
       authDomain: "callsaves.firebaseapp.com",
@@ -21,76 +54,183 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getFirestore();
+    const storage = getStorage();
 
     let currentUser;
 
+    // Auth state listener
     onAuthStateChanged(auth, user => {
-      if (!user) return window.location.href = "index.html";
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
       currentUser = user;
       document.getElementById("userEmail").textContent = user.email;
       loadPosts();
     });
 
+    // Logout
     document.getElementById("logoutBtn").addEventListener("click", () => {
       signOut(auth);
     });
 
+    // Post button
     document.getElementById("postBtn").addEventListener("click", async () => {
       const content = document.getElementById("postInput").value.trim();
-      if (!content) return;
+      const imageFile = document.getElementById("imageInput").files[0];
+
+      if (!content && !imageFile) {
+        alert("Please enter text or select an image.");
+        return;
+      }
+
+      let imageURL = "";
+      if (imageFile) {
+        const imageRef = storageRef(storage, `post_images/${Date.now()}_${imageFile.name}`);
+        await uploadBytes(imageRef, imageFile);
+        imageURL = await getDownloadURL(imageRef);
+      }
+
       await addDoc(collection(db, "posts"), {
         uid: currentUser.uid,
         email: currentUser.email,
-        content: content,
-        timestamp: new Date()
+        content: content || "",
+        imageURL: imageURL,
+        timestamp: new Date(),
+        likes: [],
+        shares: 0
       });
+
       document.getElementById("postInput").value = "";
+      document.getElementById("imageInput").value = "";
     });
 
+    // Load posts and render
     function loadPosts() {
       const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
       onSnapshot(q, snapshot => {
         const container = document.getElementById("feed");
         container.innerHTML = "";
+
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          const div = document.createElement("div");
-          div.className = "bg-white dark:bg-gray-800 p-4 rounded shadow mb-3";
-          div.innerHTML = `
+          const id = docSnap.id;
+          const liked = data.likes.includes(currentUser.uid);
+          const likeCount = data.likes.length;
+          const shareCount = data.shares || 0;
+
+          const postDiv = document.createElement("div");
+          postDiv.className = "bg-white dark:bg-gray-800 p-4 rounded shadow mb-3";
+
+          postDiv.innerHTML = `
             <p class="text-sm text-gray-500 dark:text-gray-300">${data.email} • ${new Date(data.timestamp.seconds * 1000).toLocaleString()}</p>
-            <p class="text-lg mt-1 dark:text-white">${data.content}</p>
-            ${data.uid === currentUser.uid ? `<button class="text-red-500 mt-2" onclick="deletePost('${docSnap.id}')">Delete</button>` : ""}
+            <p class="text-lg mt-1 dark:text-white">${escapeHtml(data.content).replace(/\n/g, '<br>')}</p>
+            ${data.imageURL ? `<img src="${data.imageURL}" alt="Post Image" class="mt-2 max-w-full rounded" />` : ""}
+            <div class="mt-2 space-x-4">
+              <button id="like-btn-${id}" class="text-${liked ? "red" : "gray"}-500 hover:text-red-600 cursor-pointer">${liked ? "❤️" : "🤍"} Like (${likeCount})</button>
+              <button id="comment-toggle-${id}" class="text-blue-500 hover:underline cursor-pointer">💬 Comments</button>
+              <button id="share-btn-${id}" class="text-green-500 hover:underline cursor-pointer">🔁 Share (${shareCount})</button>
+              ${data.uid === currentUser.uid ? `<button id="delete-btn-${id}" class="text-red-600 hover:underline cursor-pointer">Delete</button>` : ""}
+            </div>
+            <div id="comments-${id}" class="comments-section mt-2 hidden max-h-40 overflow-y-auto border rounded p-2 bg-gray-100 dark:bg-gray-900"></div>
+            <div class="mt-1 hidden" id="comment-input-container-${id}">
+              <input type="text" id="comment-input-${id}" placeholder="Write a comment..." class="w-full p-2 rounded border dark:bg-gray-700 dark:border-gray-600" />
+              <button id="comment-submit-${id}" class="mt-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">Send</button>
+            </div>
           `;
-          container.appendChild(div);
+
+          container.appendChild(postDiv);
+
+          // Like button
+          document.getElementById(`like-btn-${id}`).onclick = async () => {
+            const postRef = doc(db, "posts", id);
+            if (liked) {
+              await updateDoc(postRef, { likes: arrayRemove(currentUser.uid) });
+            } else {
+              await updateDoc(postRef, { likes: arrayUnion(currentUser.uid) });
+            }
+          };
+
+          // Delete button
+          if (data.uid === currentUser.uid) {
+            document.getElementById(`delete-btn-${id}`).onclick = async () => {
+              if (confirm("Delete this post?")) {
+                await deleteDoc(doc(db, "posts", id));
+              }
+            };
+          }
+
+          // Share button
+          document.getElementById(`share-btn-${id}`).onclick = async () => {
+            const postRef = doc(db, "posts", id);
+            await updateDoc(postRef, { shares: (data.shares || 0) + 1 });
+            alert("Post shared! (count increased)");
+          };
+
+          // Comment toggle button
+          const commentsSection = document.getElementById(`comments-${id}`);
+          const commentInputContainer = document.getElementById(`comment-input-container-${id}`);
+          document.getElementById(`comment-toggle-${id}`).onclick = () => {
+            const isHidden = commentsSection.classList.toggle("hidden");
+            commentInputContainer.classList.toggle("hidden");
+            if (!isHidden) loadComments(id);
+          };
+
+          // Comment submit button
+          document.getElementById(`comment-submit-${id}`).onclick = async () => {
+            const commentInput = document.getElementById(`comment-input-${id}`);
+            const commentText = commentInput.value.trim();
+            if (!commentText) return;
+            await addDoc(collection(db, "posts", id, "comments"), {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              comment: commentText,
+              timestamp: new Date()
+            });
+            commentInput.value = "";
+          };
         });
       });
     }
 
-    window.deletePost = async (id) => {
-      await deleteDoc(doc(db, "posts", id));
-    };
+    // Load comments for a post
+    function loadComments(postId) {
+      const commentsRef = collection(db, "posts", postId, "comments");
+      const q = query(commentsRef, orderBy("timestamp"));
+      const commentList = document.getElementById(`comments-${postId}`);
 
-    // Auto logout after 15 seconds of inactivity
+      onSnapshot(q, snapshot => {
+        commentList.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const div = document.createElement("div");
+          div.className = "mb-1 p-1 rounded bg-white dark:bg-gray-700";
+          div.innerHTML = `<strong>${escapeHtml(data.email)}</strong>: ${escapeHtml(data.comment)}`;
+          commentList.appendChild(div);
+        });
+      });
+    }
+
+    // Basic escape to prevent XSS
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, (m) => ({
+        '&': "&amp;",
+        '<': "&lt;",
+        '>': "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[m]);
+    }
+
+    // Auto logout after 15s inactivity
     let timeout;
     function resetTimer() {
       clearTimeout(timeout);
       timeout = setTimeout(() => signOut(auth), 15000);
     }
-    ['mousemove', 'keydown', 'click'].forEach(e => document.addEventListener(e, resetTimer));
+    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => document.addEventListener(evt, resetTimer));
     resetTimer();
+
   </script>
-</head>
-<body class="bg-gray-100 dark:bg-gray-900 min-h-screen p-4 text-gray-900 dark:text-white">
-  <div class="max-w-xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Welcome, <span id="userEmail"></span></h1>
-      <button id="logoutBtn" class="text-blue-500 underline">Logout</button>
-    </div>
-    <div class="mb-6">
-      <textarea id="postInput" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="What's on your mind?" rows="3"></textarea>
-      <button id="postBtn" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Post</button>
-    </div>
-    <div id="feed"></div>
-  </div>
 </body>
 </html>
