@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Dashboard</title>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f2f2f2;
+    }
+    .navbar {
+      background-color: #007bff;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .navbar h2 {
+      margin: 0;
+    }
+    .navbar button {
+      background: red;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    .container {
+      padding: 30px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .form-container {
+      margin-top: 30px;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 10px 5px;
+      width: calc(25% - 20px);
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button.add-btn {
+      background: #28a745;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100px;
+    }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h2>📊 My Dashboard</h2>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <div class="container">
+    <!-- Table displaying entries -->
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Due Date</th>
+          <th>Note</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody id="data-table-body">
+        <!-- Rows will appear here -->
+      </tbody>
+    </table>
+
+    <!-- Form to add new entry -->
+    <div class="form-container">
+      <input type="text" id="name" placeholder="Name" />
+      <input type="date" id="date" placeholder="Due Date" />
+      <input type="text" id="note" placeholder="Note" />
+      <input type="number" id="amount" placeholder="Amount" />
+      <button class="add-btn" id="addBtn">Add</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
+      authDomain: "callsaves.firebaseapp.com",
+      projectId: "callsaves",
+      storageBucket: "callsaves.appspot.com",
+      messagingSenderId: "782199658296",
+      appId: "1:782199658296:web:9985c37e8d671366b1d3cd",
+      measurementId: "G-B2EQRG7EYJ",
+      databaseURL: "https://callsaves-default-rtdb.firebaseio.com/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    let currentUID = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUID = user.uid;
+        loadUserData();
+        setupInactivityLogout(); // activate auto logout
+      } else {
+        window.location.href = "signin.html";
+      }
+    });
+
+    function loadUserData() {
+      const tableBody = document.getElementById("data-table-body");
+      const userRef = ref(db, `users/${currentUID}/entries`);
+      onValue(userRef, (snapshot) => {
+        tableBody.innerHTML = "";
+        snapshot.forEach((child) => {
+          const data = child.val();
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${data.name}</td>
+            <td>${data.date}</td>
+            <td>${data.note}</td>
+            <td>$${data.amount}</td>
+          `;
+          tableBody.appendChild(row);
+        });
+      });
+    }
+
+    document.getElementById("addBtn").addEventListener("click", () => {
+      const name = document.getElementById("name").value.trim();
+      const date = document.getElementById("date").value;
+      const note = document.getElementById("note").value.trim();
+      const amount = document.getElementById("amount").value.trim();
+
+      if (name && date && amount && currentUID) {
+        const entryRef = ref(db, `users/${currentUID}/entries`);
+        push(entryRef, {
+          name,
+          date,
+          note,
+          amount: parseFloat(amount)
+        });
+
+        document.getElementById("name").value = "";
+        document.getElementById("date").value = "";
+        document.getElementById("note").value = "";
+        document.getElementById("amount").value = "";
+      }
+    });
+
+    window.logout = function () {
+      signOut(auth).then(() => {
+        window.location.href = "signin.html";
+      });
+    };
+
+    function setupInactivityLogout() {
+      let timeout;
+      const resetTimer = () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          alert("Logged out due to inactivity");
+          logout();
+        }, 15000); // 15 seconds
+      };
+
+      ['click', 'mousemove', 'keydown', 'touchstart'].forEach(event => {
+        document.addEventListener(event, resetTimer);
+      });
+
+      resetTimer(); // Start timer on load
+    }
+  </script>
+</body>
+</html>
