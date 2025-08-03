@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Social Feed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
+      authDomain: "callsaves.firebaseapp.com",
+      projectId: "callsaves",
+      storageBucket: "callsaves.appspot.com",
+      messagingSenderId: "782199658296",
+      appId: "1:782199658296:web:9985c37e8d671366b1d3cd"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore();
+
+    let currentUser;
+
+    onAuthStateChanged(auth, user => {
+      if (!user) return window.location.href = "index.html";
+      currentUser = user;
+      document.getElementById("userEmail").textContent = user.email;
+      loadPosts();
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      signOut(auth);
+    });
+
+    document.getElementById("postBtn").addEventListener("click", async () => {
+      const content = document.getElementById("postInput").value.trim();
+      if (!content) return;
+      await addDoc(collection(db, "posts"), {
+        uid: currentUser.uid,
+        email: currentUser.email,
+        content: content,
+        timestamp: new Date()
+      });
+      document.getElementById("postInput").value = "";
+    });
+
+    function loadPosts() {
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      onSnapshot(q, snapshot => {
+        const container = document.getElementById("feed");
+        container.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const data = docSnap.data();
+          const div = document.createElement("div");
+          div.className = "bg-white dark:bg-gray-800 p-4 rounded shadow mb-3";
+          div.innerHTML = `
+            <p class="text-sm text-gray-500 dark:text-gray-300">${data.email} • ${new Date(data.timestamp.seconds * 1000).toLocaleString()}</p>
+            <p class="text-lg mt-1 dark:text-white">${data.content}</p>
+            ${data.uid === currentUser.uid ? `<button class="text-red-500 mt-2" onclick="deletePost('${docSnap.id}')">Delete</button>` : ""}
+          `;
+          container.appendChild(div);
+        });
+      });
+    }
+
+    window.deletePost = async (id) => {
+      await deleteDoc(doc(db, "posts", id));
+    };
+
+    // Auto logout after 15 seconds of inactivity
+    let timeout;
+    function resetTimer() {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => signOut(auth), 15000);
+    }
+    ['mousemove', 'keydown', 'click'].forEach(e => document.addEventListener(e, resetTimer));
+    resetTimer();
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen p-4 text-gray-900 dark:text-white">
+  <div class="max-w-xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Welcome, <span id="userEmail"></span></h1>
+      <button id="logoutBtn" class="text-blue-500 underline">Logout</button>
+    </div>
+    <div class="mb-6">
+      <textarea id="postInput" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600" placeholder="What's on your mind?" rows="3"></textarea>
+      <button id="postBtn" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Post</button>
+    </div>
+    <div id="feed"></div>
+  </div>
+</body>
+</html>
