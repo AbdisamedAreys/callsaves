@@ -1,155 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Group Chat</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f1f1f1;
-    }
-    header {
-      background-color: #007BFF;
-      color: white;
-      padding: 10px;
-      text-align: center;
-    }
-    #chat-box {
-      height: 70vh;
-      overflow-y: scroll;
-      padding: 15px;
-      background-color: #ffffff;
-    }
-    .message {
-      margin-bottom: 12px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      max-width: 70%;
-    }
-    .own {
-      background-color: #DCF8C6;
-      align-self: flex-end;
-      margin-left: auto;
-    }
-    .other {
-      background-color: #E2E2E2;
-      align-self: flex-start;
-    }
-    #chat-container {
-      display: flex;
-      flex-direction: column;
-    }
-    #input-container {
-      display: flex;
-      padding: 10px;
-      background-color: white;
-    }
-    #message-input {
-      flex-grow: 1;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-    }
-    #send-btn {
-      margin-left: 10px;
-      padding: 8px 16px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-    }
-    #logout {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background-color: red;
-      color: white;
-      padding: 5px 10px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | CallSaves</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
-<header>
-  <h2>🔥 Group Chat</h2>
-  <button id="logout">Logout</button>
-</header>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
+      authDomain: "callsaves.firebaseapp.com",
+      projectId: "callsaves",
+      storageBucket: "callsaves.appspot.com",
+      messagingSenderId: "782199658296",
+      appId: "1:782199658296:web:9985c37e8d671366b1d3cd"
+    };
 
-<div id="chat-box"></div>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
 
-<div id="input-container">
-  <input type="text" id="message-input" placeholder="Type a message..." />
-  <button id="send-btn">Send</button>
-</div>
+    onAuthStateChanged(auth, user => {
+      if (user) window.location.href = "feed.html";
+    });
 
-<!-- Firebase -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+    document.getElementById("authForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const isLogin = document.getElementById("isLogin").checked;
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
-    authDomain: "callsaves.firebaseapp.com",
-    databaseURL: "https://callsaves-default-rtdb.firebaseio.com",
-    projectId: "callsaves",
-    storageBucket: "callsaves.appspot.com",
-    messagingSenderId: "782199658296",
-    appId: "1:782199658296:web:9985c37e8d671366b1d3cd",
-    measurementId: "G-B2EQRG7EYJ"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-
-  const chatBox = document.getElementById("chat-box");
-  const messageInput = document.getElementById("message-input");
-  const sendBtn = document.getElementById("send-btn");
-  const logoutBtn = document.getElementById("logout");
-
-  let currentUser = null;
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      currentUser = user;
-      const messagesRef = ref(db, "messages");
-
-      onChildAdded(messagesRef, (snapshot) => {
-        const message = snapshot.val();
-        const messageDiv = document.createElement("div");
-        messageDiv.classList.add("message");
-        messageDiv.classList.add(message.email === currentUser.email ? "own" : "other");
-        messageDiv.innerHTML = `<strong>${message.email}:</strong> ${message.text}`;
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-      });
-
-      sendBtn.onclick = () => {
-        const text = messageInput.value.trim();
-        if (text !== "") {
-          push(messagesRef, {
-            text: text,
-            email: currentUser.email,
-            timestamp: Date.now()
-          });
-          messageInput.value = "";
+      try {
+        if (isLogin) {
+          await signInWithEmailAndPassword(auth, email, password);
+        } else {
+          await createUserWithEmailAndPassword(auth, email, password);
         }
-      };
-
-    } else {
-      window.location.href = "signin.html"; // redirect if not signed in
-    }
-  });
-
-  logoutBtn.onclick = () => {
-    signOut(auth);
-  };
-</script>
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center text-gray-900 dark:text-white">
+  <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-sm">
+    <h1 class="text-2xl font-bold text-center mb-6">Welcome to CallSaves</h1>
+    <form id="authForm" class="space-y-4">
+      <input type="email" id="email" placeholder="Email" required class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600" />
+      <input type="password" id="password" placeholder="Password" required class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600" />
+      <label class="flex items-center space-x-2 text-sm">
+        <input type="checkbox" id="isLogin" class="accent-blue-500" />
+        <span>Login instead of Sign up</span>
+      </label>
+      <button type="submit" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">Continue</button>
+    </form>
+  </div>
 </body>
 </html>
