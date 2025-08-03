@@ -1,210 +1,155 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>User abdisamed</title>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>Group Chat</title>
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f2f2f2;
+      background-color: #f1f1f1;
     }
-    .navbar {
-      background-color: #007bff;
+    header {
+      background-color: #007BFF;
       color: white;
-      padding: 15px 30px;
+      padding: 10px;
+      text-align: center;
+    }
+    #chat-box {
+      height: 70vh;
+      overflow-y: scroll;
+      padding: 15px;
+      background-color: #ffffff;
+    }
+    .message {
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      max-width: 70%;
+    }
+    .own {
+      background-color: #DCF8C6;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    .other {
+      background-color: #E2E2E2;
+      align-self: flex-start;
+    }
+    #chat-container {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      flex-direction: column;
     }
-    .navbar h2 {
-      margin: 0;
+    #input-container {
+      display: flex;
+      padding: 10px;
+      background-color: white;
     }
-    .navbar button {
-      background: red;
+    #message-input {
+      flex-grow: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+    }
+    #send-btn {
+      margin-left: 10px;
+      padding: 8px 16px;
+      background-color: #007BFF;
       color: white;
       border: none;
-      padding: 8px 16px;
+      border-radius: 20px;
       cursor: pointer;
-      border-radius: 5px;
     }
-
-    .container {
-      padding: 30px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-    }
-
-    th, td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-
-    th {
-      background-color: #007bff;
+    #logout {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: red;
       color: white;
-    }
-
-    .form-container {
-      margin-top: 30px;
-      background: white;
-      padding: 20px;
+      padding: 5px 10px;
+      border: none;
       border-radius: 10px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-
-    input, button {
-      padding: 10px;
-      margin: 10px 5px;
-      width: calc(25% - 20px);
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    button.add-btn {
-      background: #28a745;
-      color: white;
-      font-weight: bold;
       cursor: pointer;
-      width: 100px;
     }
   </style>
 </head>
 <body>
-  <div class="navbar">
-    <h2>📊 My Dashboard</h2>
-    <button onclick="logout()">Logout</button>
-  </div>
 
-  <div class="container">
-    <!-- Table displaying entries -->
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Due Date</th>
-          <th>Note</th>
-          <th>Amount</th>
-        </tr>
-      </thead>
-      <tbody id="data-table-body">
-        <!-- Rows will appear here -->
-      </tbody>
-    </table>
+<header>
+  <h2>🔥 Group Chat</h2>
+  <button id="logout">Logout</button>
+</header>
 
-    <!-- Form to add new entry -->
-    <div class="form-container">
-      <input type="text" id="name" placeholder="Name" />
-      <input type="date" id="date" placeholder="Due Date" />
-      <input type="text" id="note" placeholder="Note" />
-      <input type="number" id="amount" placeholder="Amount" />
-      <button class="add-btn" id="addBtn">Add</button>
-    </div>
-  </div>
+<div id="chat-box"></div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+<div id="input-container">
+  <input type="text" id="message-input" placeholder="Type a message..." />
+  <button id="send-btn">Send</button>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
-      authDomain: "callsaves.firebaseapp.com",
-      projectId: "callsaves",
-      storageBucket: "callsaves.appspot.com",
-      messagingSenderId: "782199658296",
-      appId: "1:782199658296:web:9985c37e8d671366b1d3cd",
-      measurementId: "G-B2EQRG7EYJ",
-      databaseURL: "https://callsaves-default-rtdb.firebaseio.com/"
-    };
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
+    authDomain: "callsaves.firebaseapp.com",
+    databaseURL: "https://callsaves-default-rtdb.firebaseio.com",
+    projectId: "callsaves",
+    storageBucket: "callsaves.appspot.com",
+    messagingSenderId: "782199658296",
+    appId: "1:782199658296:web:9985c37e8d671366b1d3cd",
+    measurementId: "G-B2EQRG7EYJ"
+  };
 
-    let currentUID = null;
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUID = user.uid;
-        loadUserData();
-        setupInactivityLogout(); // activate auto logout
-      } else {
-        window.location.href = "signin.html";
-      }
-    });
+  const chatBox = document.getElementById("chat-box");
+  const messageInput = document.getElementById("message-input");
+  const sendBtn = document.getElementById("send-btn");
+  const logoutBtn = document.getElementById("logout");
 
-    function loadUserData() {
-      const tableBody = document.getElementById("data-table-body");
-      const userRef = ref(db, `users/${currentUID}/entries`);
-      onValue(userRef, (snapshot) => {
-        tableBody.innerHTML = "";
-        snapshot.forEach((child) => {
-          const data = child.val();
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${data.name}</td>
-            <td>${data.date}</td>
-            <td>${data.note}</td>
-            <td>$${data.amount}</td>
-          `;
-          tableBody.appendChild(row);
-        });
+  let currentUser = null;
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      const messagesRef = ref(db, "messages");
+
+      onChildAdded(messagesRef, (snapshot) => {
+        const message = snapshot.val();
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message");
+        messageDiv.classList.add(message.email === currentUser.email ? "own" : "other");
+        messageDiv.innerHTML = `<strong>${message.email}:</strong> ${message.text}`;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
       });
-    }
 
-    document.getElementById("addBtn").addEventListener("click", () => {
-      const name = document.getElementById("name").value.trim();
-      const date = document.getElementById("date").value;
-      const note = document.getElementById("note").value.trim();
-      const amount = document.getElementById("amount").value.trim();
-
-      if (name && date && amount && currentUID) {
-        const entryRef = ref(db, `users/${currentUID}/entries`);
-        push(entryRef, {
-          name,
-          date,
-          note,
-          amount: parseFloat(amount)
-        });
-
-        document.getElementById("name").value = "";
-        document.getElementById("date").value = "";
-        document.getElementById("note").value = "";
-        document.getElementById("amount").value = "";
-      }
-    });
-
-    window.logout = function () {
-      signOut(auth).then(() => {
-        window.location.href = "signin.html";
-      });
-    };
-
-    function setupInactivityLogout() {
-      let timeout;
-      const resetTimer = () => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          alert("Logged out due to inactivity");
-          logout();
-        }, 1500000); // 15 seconds
+      sendBtn.onclick = () => {
+        const text = messageInput.value.trim();
+        if (text !== "") {
+          push(messagesRef, {
+            text: text,
+            email: currentUser.email,
+            timestamp: Date.now()
+          });
+          messageInput.value = "";
+        }
       };
 
-      ['click', 'mousemove', 'keydown', 'touchstart'].forEach(event => {
-        document.addEventListener(event, resetTimer);
-      });
-
-      resetTimer(); // Start timer on load
+    } else {
+      window.location.href = "signin.html"; // redirect if not signed in
     }
-  </script>
+  });
+
+  logoutBtn.onclick = () => {
+    signOut(auth);
+  };
+</script>
 </body>
 </html>
-
-
