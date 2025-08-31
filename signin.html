@@ -1,89 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sign In</title>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>Secure Data</title>
   <style>
-    body { font-family: sans-serif; background: #f0f8ff; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.2);
-      width: 300px;
-    }
-    input, button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    #error {
-      margin-top: 10px;
-      color: red;
-      font-weight: bold;
-      text-align: center;
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #login, #app { max-width: 500px; margin: auto; }
+    #app { display: none; }
+    input { margin: 5px; padding: 8px; }
+    button { padding: 8px 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Sign In</h2>
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <div id="error"></div>
-  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+<div id="login">
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Username"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="login()">Login</button>
+  <p id="error" style="color:red;"></p>
+</div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBL0o9HZGmTOmj6xOWsRyvEKpt9saAc16A",
-      authDomain: "callsaves.firebaseapp.com",
-      projectId: "callsaves",
-      storageBucket: "callsaves.firebasestorage.app",
-      messagingSenderId: "782199658296",
-      appId: "1:782199658296:web:9985c37e8d671366b1d3cd",
-      measurementId: "G-B2EQRG7EYJ"
-    };
+<div id="app">
+  <h2>Secure Data</h2>
+  <table id="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Phone</th>
+        <th>Internet</th>
+        <th>Operator</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+<script>
+  const USERNAME = "admin";   // change this
+  const PASSWORD = "1234";    // change this
+  const scriptUrl = "https://script.google.com/macros/s/AKfycbzUOnqRIyqh8XqqquS6AX9G7dlQqTQT2bC50BUjhXpbKWVS0kSNV1wVgEMR65VAG-4sHA/exec"; // replace with your Apps Script exec URL
 
-    const loginBtn = document.getElementById("loginBtn");
-    const errorDiv = document.getElementById("error");
+  function login() {
+    const u = document.getElementById("username").value;
+    const p = document.getElementById("password").value;
+    if (u === USERNAME && p === PASSWORD) {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      loadData();
+    } else {
+      document.getElementById("error").innerText = "Invalid username or password!";
+    }
+  }
 
-    loginBtn.addEventListener("click", () => {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
-          // Redirect to index if login is successful
-          window.location.href = "index.html";
-        })
-        .catch((error) => {
-          let message = "Login failed.";
-          if (error.code === "auth/user-not-found") {
-            message = "No user found with this email.";
-          } else if (error.code === "auth/wrong-password") {
-            message = "Incorrect password.";
-          } else if (error.code === "auth/invalid-email") {
-            message = "Invalid email address.";
-          }
-          errorDiv.textContent = message;
+  function loadData() {
+    fetch(scriptUrl)
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.querySelector("#data-table tbody");
+        tbody.innerHTML = "";
+        data.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${row.name}</td>
+            <td>${row.phone}</td>
+            <td>${row.internet}</td>
+            <td>${row.operator}</td>
+          `;
+          tbody.appendChild(tr);
         });
-    });
-  </script>
+      })
+      .catch(err => {
+        console.error("Error loading data:", err);
+      });
+  }
+</script>
+
 </body>
 </html>
