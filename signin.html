@@ -59,27 +59,26 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const messaging = firebase.messaging();
 
-// ✅ Register Service Worker
+let lastFalseCount = 0;
+
+// ✅ Register service worker and get FCM token
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/callsaves/firebase-messaging-sw.js')
     .then(registration => {
       console.log('Service Worker registered:', registration);
-      messaging.useServiceWorker(registration);
-    })
-    .catch(err => console.error('SW registration failed:', err));
+
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          messaging.getToken({
+            vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0",
+            serviceWorkerRegistration: registration
+          }).then(token => console.log("FCM Token:", token))
+            .catch(err => console.log("Token error:", err));
+        }
+      });
+
+    }).catch(err => console.error('SW registration failed:', err));
 }
-
-// Request notification permission & get token
-Notification.requestPermission().then(permission => {
-  if (permission === "granted") {
-    messaging.getToken({
-      vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0"
-    }).then(token => console.log("FCM Token:", token))
-      .catch(err => console.log("Token error:", err));
-  }
-});
-
-let lastFalseCount = 0;
 
 function renderTables(data) {
   const trueTableBody = document.querySelector("#trueTable tbody");
@@ -116,7 +115,7 @@ function renderTables(data) {
   if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
   if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="4">No FALSE rows</td></tr>';
 
-  // Show browser notification for new FALSE rows
+  // Show notification if new FALSE rows appear
   if (falseRows > lastFalseCount) {
     notifyFalseRows(falseRows);
   }
