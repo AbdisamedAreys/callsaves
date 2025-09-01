@@ -1,237 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Debt Manager</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+  <meta charset="utf-8">
+  <title>Resellers Dashboard + Push</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1, h2 { color: #2196F3; }
+    .dashboard { margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #2196F3; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    .true-row { background-color: #d4edda; }
+    .false-row { background-color: #f8d7da; }
+  </style>
 </head>
 <body>
-  <h2>Debt Manager</h2>
+<h1>Resellers Sheet Dashboard</h1>
+<div class="dashboard">
+  <p>Number of TRUE rows: <span id="trueCount">0</span></p>
+  <p>Number of FALSE rows: <span id="falseCount">0</span></p>
+</div>
 
-  <!-- Login -->
-  <div id="loginForm">
-    <h3>Login</h3>
-    <input type="text" id="loginUsername" placeholder="Username"><br>
-    <input type="password" id="loginPassword" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <p>Don't have an account? <a href="#" onclick="showSignup()">Signup</a></p>
-  </div>
+<h2>TRUE Table</h2>
+<table id="trueTable">
+  <thead>
+    <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th></tr>
+  </thead>
+  <tbody><tr><td colspan="4">Loading...</td></tr></tbody>
+</table>
 
-  <!-- Signup -->
-  <div id="signupForm" style="display:none;">
-    <h3>Signup</h3>
-    <input type="text" id="signupUsername" placeholder="Username"><br>
-    <input type="password" id="signupPassword" placeholder="Password"><br>
-    <button onclick="signup()">Signup</button>
-    <p>Already have an account? <a href="#" onclick="showLogin()">Login</a></p>
-  </div>
+<h2>FALSE Table</h2>
+<table id="falseTable">
+  <thead>
+    <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th></tr>
+  </thead>
+  <tbody><tr><td colspan="4">Loading...</td></tr></tbody>
+</table>
 
-  <!-- Debt Manager -->
-  <div id="debtManager" style="display:none;">
-    <h3>Welcome, <span id="currentUser"></span>!</h3>
-    <button onclick="logout()">Logout</button>
-    <br><br>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 
-    <button onclick="openForm()">Add Debt</button>
-    <div id="debtFormPopup" style="display:none;">
-      <h3>Add Debt</h3>
-      <input type="text" id="name" placeholder="Name"><br>
-      <input type="text" id="phone" placeholder="Phone"><br>
-      <input type="number" id="amount" placeholder="Amount"><br>
-      <input type="date" id="dueDate"><br>
-      <textarea id="note" placeholder="Note"></textarea><br>
-      <button onclick="addDebt()">Save</button>
-      <button onclick="closeForm()">Cancel</button>
-    </div>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC9niHO68k4m5fu8zJN-kCN9b0_frER9ek",
+  authDomain: "resellersapp-252.firebaseapp.com",
+  databaseURL: "https://resellersapp-252-default-rtdb.firebaseio.com",
+  projectId: "resellersapp-252",
+  storageBucket: "resellersapp-252.firebasestorage.app",
+  messagingSenderId: "890644506014",
+  appId: "1:890644506014:web:d6a85165a0eb1ec5cae28f",
+  measurementId: "G-JHS1KM8C8J"
+};
 
-    <h3>Debts</h3>
-    <table border="1" id="debtTable">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Amount</th>
-          <th>Date Created</th>
-          <th>Due Date</th>
-          <th>Note</th>
-        </tr>
-      </thead>
-      <tbody id="debtList"></tbody>
-    </table>
-  </div>
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const messaging = firebase.messaging();
 
-  <script>
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyC9niHO68k4m5fu8zJN-kCN9b0_frER9ek",
-      authDomain: "resellersapp-252.firebaseapp.com",
-      databaseURL: "https://resellersapp-252-default-rtdb.firebaseio.com",
-      projectId: "resellersapp-252",
-      storageBucket: "resellersapp-252.firebasestorage.app",
-      messagingSenderId: "890644506014",
-      appId: "1:890644506014:web:d6a85165a0eb1ec5cae28f",
-      measurementId: "G-JHS1KM8C8J"
-    };
-    firebase.initializeApp(firebaseConfig);
+// ✅ Register Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/callsaves/firebase-messaging-sw.js')
+    .then(registration => {
+      console.log('Service Worker registered:', registration);
+      messaging.useServiceWorker(registration);
+    })
+    .catch(err => console.error('SW registration failed:', err));
+}
 
-    const db = firebase.database();
-    const messaging = firebase.messaging();
+// Request notification permission & get token
+Notification.requestPermission().then(permission => {
+  if (permission === "granted") {
+    messaging.getToken({
+      vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0"
+    }).then(token => console.log("FCM Token:", token))
+      .catch(err => console.log("Token error:", err));
+  }
+});
 
-    // ✅ Register Service Worker under /callsaves/
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/callsaves/firebase-messaging-sw.js')
-        .then((registration) => {
-          console.log('Service Worker registered:', registration);
-          messaging.useServiceWorker(registration);
-        })
-        .catch((err) => {
-          console.error('Service Worker registration failed:', err);
-        });
-    }
+let lastFalseCount = 0;
 
-    // ✅ Request Notification Permission & Get Token
-    Notification.requestPermission().then(permission => {
-      if (permission === "granted") {
-        messaging.getToken({
-          vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0"
-        })
-        .then(token => {
-          console.log("FCM Token:", token);
-          // You can save this token to your DB if needed
-        })
-        .catch(err => console.log("Token error:", err));
-      }
+function renderTables(data) {
+  const trueTableBody = document.querySelector("#trueTable tbody");
+  const falseTableBody = document.querySelector("#falseTable tbody");
+  let trueRows = 0, falseRows = 0;
+
+  trueTableBody.innerHTML = "";
+  falseTableBody.innerHTML = "";
+
+  data.forEach(row => {
+    const status = row[row.length - 1];
+    const displayRow = row.slice(0, row.length - 1);
+    const tr = document.createElement("tr");
+    displayRow.forEach(cell => {
+      const td = document.createElement("td");
+      td.textContent = cell;
+      tr.appendChild(td);
     });
 
-    // ===== AUTH SYSTEM =====
-    function showSignup() {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("signupForm").style.display = "block";
+    if (status === true || status === "TRUE") {
+      tr.classList.add("true-row");
+      trueTableBody.appendChild(tr);
+      trueRows++;
+    } else {
+      tr.classList.add("false-row");
+      falseTableBody.appendChild(tr);
+      falseRows++;
     }
+  });
 
-    function showLogin() {
-      document.getElementById("signupForm").style.display = "none";
-      document.getElementById("loginForm").style.display = "block";
-    }
+  document.getElementById("trueCount").textContent = trueRows;
+  document.getElementById("falseCount").textContent = falseRows;
 
-    function signup() {
-      const username = document.getElementById("signupUsername").value;
-      const password = document.getElementById("signupPassword").value;
+  if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
+  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="4">No FALSE rows</td></tr>';
 
-      if (!username || !password) {
-        alert("Fill all fields");
-        return;
-      }
+  // Show browser notification for new FALSE rows
+  if (falseRows > lastFalseCount) {
+    notifyFalseRows(falseRows);
+  }
+  lastFalseCount = falseRows;
+}
 
-      if (localStorage.getItem("user_" + username)) {
-        alert("User already exists");
-        return;
-      }
+function notifyFalseRows(count) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(`${count} is ready to register`, {
+      body: `${count} are waiting for you, please register as possible`
+    });
+  }
+}
 
-      localStorage.setItem("user_" + username, password);
-      alert("Signup successful, please login");
-      showLogin();
-    }
-
-    function login() {
-      const username = document.getElementById("loginUsername").value;
-      const password = document.getElementById("loginPassword").value;
-
-      const storedPassword = localStorage.getItem("user_" + username);
-
-      if (storedPassword === password) {
-        localStorage.setItem("loggedInUser", username);
-        document.getElementById("currentUser").innerText = username;
-        document.getElementById("loginForm").style.display = "none";
-        document.getElementById("signupForm").style.display = "none";
-        document.getElementById("debtManager").style.display = "block";
-        loadDebts();
-      } else {
-        alert("Invalid username or password");
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem("loggedInUser");
-      document.getElementById("debtManager").style.display = "none";
-      document.getElementById("loginForm").style.display = "block";
-    }
-
-    // ===== DEBT MANAGER =====
-    function openForm() {
-      document.getElementById("debtFormPopup").style.display = "block";
-    }
-
-    function closeForm() {
-      document.getElementById("debtFormPopup").style.display = "none";
-    }
-
-    function addDebt() {
-      const name = document.getElementById("name").value;
-      const phone = document.getElementById("phone").value;
-      const amount = document.getElementById("amount").value;
-      const dueDate = document.getElementById("dueDate").value;
-      const note = document.getElementById("note").value;
-      const user = localStorage.getItem("loggedInUser");
-
-      if (!user) {
-        alert("Login first");
-        return;
-      }
-
-      const debt = {
-        name,
-        phone,
-        amount,
-        dateCreated: new Date().toISOString().split('T')[0],
-        dueDate,
-        note,
-        user
-      };
-
-      db.ref("debts").push(debt);
-      closeForm();
-    }
-
-    function loadDebts() {
-      const user = localStorage.getItem("loggedInUser");
-      db.ref("debts").on("value", snapshot => {
-        const debts = snapshot.val();
-        const debtList = document.getElementById("debtList");
-        debtList.innerHTML = "";
-
-        for (let id in debts) {
-          const debt = debts[id];
-          if (user === "admin" || debt.user === user) {
-            const row = `<tr>
-              <td>${debt.name}</td>
-              <td>${debt.phone}</td>
-              <td>${debt.amount}</td>
-              <td>${debt.dateCreated}</td>
-              <td>${debt.dueDate}</td>
-              <td>${debt.note}</td>
-            </tr>`;
-            debtList.innerHTML += row;
-          }
-        }
-      });
-    }
-
-    // Auto-login if user is already logged in
-    window.onload = function() {
-      const user = localStorage.getItem("loggedInUser");
-      if (user) {
-        document.getElementById("currentUser").innerText = user;
-        document.getElementById("loginForm").style.display = "none";
-        document.getElementById("signupForm").style.display = "none";
-        document.getElementById("debtManager").style.display = "block";
-        loadDebts();
-      }
-    };
-  </script>
+// Firebase real-time listener
+db.ref("sheetData").on("value", snapshot => {
+  const data = snapshot.val();
+  if (data) renderTables(data);
+});
+</script>
 </body>
 </html>
