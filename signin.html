@@ -13,6 +13,9 @@
     tr:nth-child(even) { background-color: #f2f2f2; }
     .true-row { background-color: #d4edda; }
     .false-row { background-color: #f8d7da; }
+    button.copy-btn { margin-left: 5px; padding: 2px 5px; font-size: 0.9em; }
+    button.register-btn { padding: 5px 10px; background-color: #2196F3; color: white; border: none; cursor: pointer; border-radius: 3px; }
+    button.register-btn:hover { background-color: #1976D2; }
   </style>
 </head>
 <body>
@@ -33,9 +36,9 @@
 <h2>FALSE Table</h2>
 <table id="falseTable">
   <thead>
-    <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th></tr>
+    <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th><th>Action</th></tr>
   </thead>
-  <tbody><tr><td colspan="4">Loading...</td></tr></tbody>
+  <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
 </table>
 
 <!-- Firebase -->
@@ -61,13 +64,11 @@ const messaging = firebase.messaging();
 
 let lastFalseCount = 0;
 
-// ✅ Register service worker for GitHub Pages
+// Service Worker for push notifications
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('firebase-messaging-sw.js') // must be in same folder
+  navigator.serviceWorker.register('firebase-messaging-sw.js')
     .then(registration => {
       console.log('Service Worker registered:', registration);
-
-      // Request permission and get token
       Notification.requestPermission().then(permission => {
         if (permission === "granted") {
           messaging.getToken({
@@ -77,10 +78,10 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log("Token error:", err));
         }
       });
-
     }).catch(err => console.error('SW registration failed:', err));
 }
 
+// Render tables
 function renderTables(data) {
   const trueTableBody = document.querySelector("#trueTable tbody");
   const falseTableBody = document.querySelector("#falseTable tbody");
@@ -89,21 +90,56 @@ function renderTables(data) {
   trueTableBody.innerHTML = "";
   falseTableBody.innerHTML = "";
 
-  data.forEach(row => {
+  data.forEach((row, index) => {
     const status = row[row.length - 1];
     const displayRow = row.slice(0, row.length - 1);
-    const tr = document.createElement("tr");
-    displayRow.forEach(cell => {
-      const td = document.createElement("td");
-      td.textContent = cell;
-      tr.appendChild(td);
-    });
 
     if (status === true || status === "TRUE") {
+      const tr = document.createElement("tr");
+      displayRow.forEach(cell => {
+        const td = document.createElement("td");
+        td.textContent = cell;
+        tr.appendChild(td);
+      });
       tr.classList.add("true-row");
       trueTableBody.appendChild(tr);
       trueRows++;
     } else {
+      const tr = document.createElement("tr");
+
+      displayRow.forEach((cell, colIndex) => {
+        const td = document.createElement("td");
+        td.textContent = cell;
+
+        // Add copy buttons for Phone number and Internet number
+        if (colIndex === 1 || colIndex === 2) {
+          const copyBtn = document.createElement("button");
+          copyBtn.textContent = "Copy";
+          copyBtn.className = "copy-btn";
+          copyBtn.addEventListener("click", () => {
+            navigator.clipboard.writeText(cell).then(() => alert("Copied: " + cell));
+          });
+          td.appendChild(copyBtn);
+        }
+        tr.appendChild(td);
+      });
+
+      // Action button
+      const actionTd = document.createElement("td");
+      const registerBtn = document.createElement("button");
+      registerBtn.textContent = "Register";
+      registerBtn.className = "register-btn";
+      registerBtn.addEventListener("click", () => {
+        if (confirm(`Are you sure you want to register ${displayRow[0]}?`)) {
+          // Update status in Firebase
+          db.ref("sheetData/" + index + "/status").set(true)
+            .then(() => alert(displayRow[0] + " is now registered!"))
+            .catch(err => console.error(err));
+        }
+      });
+      actionTd.appendChild(registerBtn);
+      tr.appendChild(actionTd);
+
       tr.classList.add("false-row");
       falseTableBody.appendChild(tr);
       falseRows++;
@@ -114,12 +150,10 @@ function renderTables(data) {
   document.getElementById("falseCount").textContent = falseRows;
 
   if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
-  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="4">No FALSE rows</td></tr>';
+  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="5">No FALSE rows</td></tr>';
 
-  // Notify when new FALSE rows appear
-  if (falseRows > lastFalseCount) {
-    notifyFalseRows(falseRows);
-  }
+  // Push notification for new FALSE rows
+  if (falseRows > lastFalseCount) notifyFalseRows(falseRows);
   lastFalseCount = falseRows;
 }
 
@@ -128,13 +162,13 @@ function notifyFalseRows(count) {
   if (Notification.permission === "granted") {
     new Notification(`${count} is ready to register`, {
       body: `${count} are waiting for you, please register as possible`,
-      requireInteraction: true,  // keeps notification until user interacts
-      silent: false               // plays sound
+      requireInteraction: true,
+      silent: false
     });
   }
 }
 
-// Firebase real-time listener
+// Firebase listener
 db.ref("sheetData").on("value", snapshot => {
   const data = snapshot.val();
   if (data) renderTables(data);
@@ -142,109 +176,3 @@ db.ref("sheetData").on("value", snapshot => {
 </script>
 </body>
 </html>
-  </thead>
-  <tbody><tr><td colspan="4">Loading...</td></tr></tbody>
-</table>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyC9niHO68k4m5fu8zJN-kCN9b0_frER9ek",
-  authDomain: "resellersapp-252.firebaseapp.com",
-  databaseURL: "https://resellersapp-252-default-rtdb.firebaseio.com",
-  projectId: "resellersapp-252",
-  storageBucket: "resellersapp-252.firebasestorage.app",
-  messagingSenderId: "890644506014",
-  appId: "1:890644506014:web:d6a85165a0eb1ec5cae28f",
-  measurementId: "G-JHS1KM8C8J"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const messaging = firebase.messaging();
-
-let lastFalseCount = 0;
-
-// ✅ Register service worker and get FCM token
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/callsaves/firebase-messaging-sw.js')
-    .then(registration => {
-      console.log('Service Worker registered:', registration);
-
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          messaging.getToken({
-            vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0",
-            serviceWorkerRegistration: registration
-          }).then(token => console.log("FCM Token:", token))
-            .catch(err => console.log("Token error:", err));
-        }
-      });
-
-    }).catch(err => console.error('SW registration failed:', err));
-}
-
-function renderTables(data) {
-  const trueTableBody = document.querySelector("#trueTable tbody");
-  const falseTableBody = document.querySelector("#falseTable tbody");
-  let trueRows = 0, falseRows = 0;
-
-  trueTableBody.innerHTML = "";
-  falseTableBody.innerHTML = "";
-
-  data.forEach(row => {
-    const status = row[row.length - 1];
-    const displayRow = row.slice(0, row.length - 1);
-    const tr = document.createElement("tr");
-    displayRow.forEach(cell => {
-      const td = document.createElement("td");
-      td.textContent = cell;
-      tr.appendChild(td);
-    });
-
-    if (status === true || status === "TRUE") {
-      tr.classList.add("true-row");
-      trueTableBody.appendChild(tr);
-      trueRows++;
-    } else {
-      tr.classList.add("false-row");
-      falseTableBody.appendChild(tr);
-      falseRows++;
-    }
-  });
-
-  document.getElementById("trueCount").textContent = trueRows;
-  document.getElementById("falseCount").textContent = falseRows;
-
-  if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
-  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="4">No FALSE rows</td></tr>';
-
-  // Show notification if new FALSE rows appear
-  if (falseRows > lastFalseCount) {
-    notifyFalseRows(falseRows);
-  }
-  lastFalseCount = falseRows;
-}
-
-function notifyFalseRows(count) {
-  if (!("Notification" in window)) return;
-  if (Notification.permission === "granted") {
-    new Notification(`${count} is ready to register`, {
-      body: `${count} are waiting for you, please register as possible`
-    });
-  }
-}
-
-// Firebase real-time listener
-db.ref("sheetData").on("value", snapshot => {
-  const data = snapshot.val();
-  if (data) renderTables(data);
-});
-</script>
-</body>
-</html>
-
