@@ -41,44 +41,23 @@
   <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
 </table>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
-
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyC9niHO68k4m5fu8zJN-kCN9b0_frER9ek",
-  authDomain: "resellersapp-252.firebaseapp.com",
-  databaseURL: "https://resellersapp-252-default-rtdb.firebaseio.com",
-  projectId: "resellersapp-252",
-  storageBucket: "resellersapp-252.firebasestorage.app",
-  messagingSenderId: "890644506014",
-  appId: "1:890644506014:web:d6a85165a0eb1ec5cae28f",
-  measurementId: "G-JHS1KM8C8J"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const messaging = firebase.messaging();
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbz5jSKMuT8ikNxjmNNp6zlOjkAJXLw5P49AugGc91EBQfMKb3qDSKFy_9oRHbXSsOjfvw/exec";
 
 let lastFalseCount = 0;
 
-// Service Worker for push notifications
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('firebase-messaging-sw.js')
-    .then(registration => {
-      console.log('Service Worker registered:', registration);
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          messaging.getToken({
-            vapidKey: "BO34mA3jFPmCE2HVxpriqdTBTViLgW8CHk7gBaNLEL3XQEFsGWG3xGa8gfZZfoKYy61nxl2FArCwg1Tt5zechF0",
-            serviceWorkerRegistration: registration
-          }).then(token => console.log("FCM Token:", token))
-            .catch(err => console.log("Token error:", err));
-        }
-      });
-    }).catch(err => console.error('SW registration failed:', err));
+// Fetch and render tables
+function loadData() {
+  fetch(SHEET_URL)
+    .then(res => res.json())
+    .then(data => {
+      if (data && Array.isArray(data)) {
+        renderTables(data);
+      } else {
+        console.error("Invalid data:", data);
+      }
+    })
+    .catch(err => console.error("Fetch error:", err));
 }
 
 // Render tables
@@ -131,9 +110,13 @@ function renderTables(data) {
       registerBtn.className = "register-btn";
       registerBtn.addEventListener("click", () => {
         if (confirm(`Are you sure you want to register ${displayRow[0]}?`)) {
-          // Update status in Firebase
-          db.ref("sheetData/" + index + "/status").set(true)
-            .then(() => alert(displayRow[0] + " is now registered!"))
+          // Call Apps Script to update status in Google Sheet
+          fetch(SHEET_URL + "?action=register&row=" + (index + 2)) // +2 to skip header
+            .then(res => res.json())
+            .then(() => {
+              alert(displayRow[0] + " is now registered!");
+              loadData(); // refresh the table
+            })
             .catch(err => console.error(err));
         }
       });
@@ -168,11 +151,15 @@ function notifyFalseRows(count) {
   }
 }
 
-// Firebase listener
-db.ref("sheetData").on("value", snapshot => {
-  const data = snapshot.val();
-  if (data) renderTables(data);
-});
+// Ask permission for notifications
+if ("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// Initial load
+loadData();
+// Auto refresh every 30 seconds
+setInterval(loadData, 30000);
 </script>
 </body>
 </html>
