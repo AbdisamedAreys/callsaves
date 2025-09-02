@@ -133,7 +133,7 @@ function renderTables(data) {
   document.getElementById("falseCount").textContent = falseRows;
 
   if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
-  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="5">No FALSE rows</td></tr>';
+  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="5">Ma jiro qof cusub oo ku sugaya </td></tr>';
 
   // Push notification for new FALSE rows
   if (falseRows > lastFalseCount) notifyFalseRows(falseRows);
@@ -163,6 +163,7 @@ setInterval(loadData, 30000);
 </script>
 </body>
 </html>
+
 
 
 
