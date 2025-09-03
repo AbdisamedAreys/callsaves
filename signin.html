@@ -3,59 +3,637 @@
 <head>
   <meta charset="utf-8">
   <title>Resellers Dashboard + Push</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #FFFDF2}
     h1, h2 { color: #2196F3; }
-    .dashboard { margin-bottom: 20px; }
+    .dashboard { margin-bottom: 20px; width: 100%;margin-top: 50px;
+    }
     table { border-collapse: collapse; width: 100%; margin-bottom: 30px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #2196F3; color: white; }
-    tr:nth-child(even) { background-color: #f2f2f2; }
-    .true-row { background-color: #d4edda; }
-    .false-row { background-color: #f8d7da; }
-    button.copy-btn { margin-left: 5px; padding: 2px 5px; font-size: 0.9em; }
-    button.register-btn { padding: 5px 10px; background-color: #2196F3; color: white; border: none; cursor: pointer; border-radius: 3px; }
-    button.register-btn:hover { background-color: #1976D2; }
+    th, td { 
+      border-bottom: 0.5px solid #FFEBB4; padding: 25px 5px; text-align: left; 
+    }
+    th { 
+      background-color: #FFDF3E; color: black;
+    }
+    tr:nth-child(even) {
+     background-color: #fff; }
+    .true-row { background-color: #fff; 
+    }
+    button.copy-btn {color: black; background: #FFDF3E; border: none; border-radius: 5px; padding: 5px 20px; margin-left: 20px;}
+    button.register-btn { padding: 10px 40px; background-color: #1E2329; color: white; border: none; cursor: pointer; border-radius: 50px; align-items: center; justify-content: center;display: flex;margin-top: 10px; margin-left: 10px;}
+    button.register-btn:hover { background-color: #1E2329; }
+    /* FALSE cards */
+    #falseContainer { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .false-card { border-radius: 14px; padding: 10px; background-color: #fff; width: 100%; }
+    .false-card p { margin-top:15px; font-size:18px; }
   </style>
 </head>
 <body>
-<h1>Resellers Sheet Dashboard</h1>
-<div class="dashboard">
-  <p>Number of TRUE rows: <span id="trueCount">0</span></p>
-  <p>Number of FALSE rows: <span id="falseCount">0</span></p>
+  <style type="text/css">
+    .lockclass{
+      position: fixed;
+    top: 0;
+    right: 0;
+    left: 0px;
+    bottom: 0;
+    background: white;
+    }
+    .lockImg{
+      width: 60%;
+      margin-left: 20%;
+      margin-top: 100px;
+    }
+    .input{
+      margin-top: 100px;
+    }
+    .input p{
+      margin-left: 5%;
+      font-size: 16px;
+    }
+    .input label{
+      margin-left: 5%;
+      font-size: 16px;
+      color: red;
+      font-weight: bold;
+    }
+    .input input{
+      width: 90%;
+      margin-left: 5%;
+      height: 50px;
+      background: #FEFFE8;
+      font-size: 30px;
+      border: 0.5px solid #C9CAB7;
+      outline: none;
+      border-radius: 13px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .input button{
+      background: #1E2329;
+      color: white;
+      border-radius: 50px;
+      padding: 15px 30px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: none;
+      font-size: 17px;
+      margin-top: 30px;
+      width: 40%;
+      margin-left: 30%;
+      }
+      .sponsor{
+        position: fixed;
+        padding-bottom: 100px;
+        right: 0;
+        left: 0px;
+        bottom: 0;
+        background: white;
+        text-align: center;
+      }
+      .changePassword{
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+      }
+      .changeB{
+        background: #fff;
+        color: #111;
+        width: 90%;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        margin-left: 5%;
+        margin-top: 30vh;
+      }
+      .changeB label{
+        margin-left: 5%;
+      }
+      .changeB input{
+        width: 85%;
+        height: 50px;
+        background: #FEFFE8;
+        font-size: 15px;
+        border: 0.5px solid #C9CAB7;
+        outline: none;
+        padding-left: 2.5%;
+        padding-right: 2.5%;
+        border-radius: 10px;
+        text-align: left;
+        margin-bottom: 10px;
+        margin-top: 10px;
+      }
+      .changeBtn{
+        background: #1E2329;
+        color: white;
+        border-radius: 50px;
+        padding: 15px 30px;
+        margin-bottom: 20px;
+        text-align: center;
+        border: none;
+        font-size: 17px;
+        margin-top: 10px;
+      }
+      .closeChange{
+        background: #FFDF3E;
+        color: black;
+        border-radius: 50px;
+        padding: 15px 30px;
+        margin-bottom: 20px;
+        text-align: center;
+        border: none;
+        font-size: 17px;
+        margin-top: 10px;
+      }
+  </style>
+    <div class="changePassword" style="display: none;">
+      <div class="changeB">
+        <center>
+          <h3>Change password</h3>
+        </center>
+        <label id="label1">Enter current password</label>
+        <center>
+          <input type="password" maxlength="4" name="" placeholder="Current password" id="currentPass">
+        </center>
+        <label id="label2">Enter new password</label>
+        <center>
+          <input type="password" maxlength="4" name="" placeholder="New password" id="newPass">
+        </center>
+        <label id="label3">Current password</label>
+        <center>
+          <input type="password" maxlength="4" name="" placeholder="Confirm password" id="confirmPass">
+          <button class="changeBtn" id="changeBtn">Change Password</button>
+          <button class="closeChange" id="closeChange">Close</button>
+        </center>
+      </div>
+    </div>
+
+
+    <div class="lockclass">
+      <img src="binance-h.png" class="lockImg">
+      <div class="input">
+        <p>Enter PASSCODE</p>
+        <input type="password" name="" id="passcode" placeholder="####" maxlength="4">
+        <label style="display: none;" id="labelC">incorrect password</label>
+        <button id="passBtn">Unlock</button>
+      </div>
+      <div class="sponsor">
+        <p>from</p>
+        <img class="sponsorImg" src="sponsor.png">
+      </div>
+    </div>
+
+
+<!-- Popup -->
+<div class="pupupshadow" style="display: none;">
+<div id="popup" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-96 text-center">
+    <h3 class="text-xl font-bold mb-4" id="popupTitle">Popup Title</h3>
+    <p id="popupMessage" class="mb-4">Popup message goes here...</p>
+    <center><button onclick="closePopup(); resetTimer();" class="bg-blue-500 text-white px-4 py-2 rounded" id="ok">OK</button></center> 
+  </div>
+</div>
 </div>
 
-<h2>TRUE Table</h2>
+<!-- Confirm Modal -->
+<div class="confirmshadow" style="display: none;">
+<div id="confirmBox" class="hidden fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+  <div class="bg-white p-6 rounded shadow-lg w-80 text-center">
+    <h3>Confirmation</h3>
+    <p id="confirmMessage" class="mb-4 text-lg font-semibold">Are you sure you want to register Farxaan maxamed xuseen}</p>
+    <div class="flex justify-around">
+      <center><button id="confirmYes" class="bg-green-500 text-white px-4 py-2 rounded" onclick="showPopup(); resetTimer()">Yes</button>
+      <button id="confirmNo" class="bg-red-500 text-white px-4 py-2 rounded" onclick="resetTimer()">No</button></center>
+    </div>
+  </div>
+</div>
+  
+</div>
+
+<script type="text/javascript">
+  const confirmYes = document.getElementById('confirmYes');
+  const confirmNo = document.getElementById('confirmNo');
+  const ok = document.getElementById('ok');
+  const confirmshadow = document.querySelector('.confirmshadow');
+  const pupupshadow = document.querySelector('.pupupshadow');
+
+  const lockclass = document.querySelector('.lockclass');
+  const passcode = document.getElementById('passcode');
+  const labelC = document.getElementById('labelC');
+  const passBtn = document.getElementById('passBtn');
+  
+
+
+
+  // Keys & timer setup
+const TIMER_KEY = "unlock_until";
+const DURATION = 59 * 1000; // 15 seconds
+
+// Check lock/unlock
+function checkLock() {
+  const now = Date.now();
+  const unlockUntil = parseInt(localStorage.getItem(TIMER_KEY) || "0", 10);
+
+  if (now < unlockUntil) {
+    lockclass.style.display = "none";  // unlocked
+    passcode.value = "";
+  } else {
+    lockclass.style.display = "block"; // locked
+  }
+}
+
+// Reset function (you will call this from buttons with onclick="resetTimer()")
+function resetTimer() {
+  const newUnlockTime = Date.now() + DURATION;
+  localStorage.setItem(TIMER_KEY, newUnlockTime);
+  checkLock();
+}
+
+// Passcode check
+passBtn.addEventListener("click", () => {
+  if (passcode.value == localStorage.getItem("passcode")) {
+    resetTimer(); // start 15s timer after correct passcode
+  } else {
+    labelC.style.display = "block";
+  }
+});
+
+// Keep checking lock/unlock every second
+setInterval(checkLock, 1000);
+
+// Run on page load
+checkLock();
+
+
+  passcode.addEventListener("click", () => {
+    labelC.style.display = "none";
+    passcode.value = "";
+  });
+
+
+  confirmYes.addEventListener("click", () => {
+    confirmshadow.style.display = "none";
+    pupupshadow.style.display = "block";
+  });
+  ok.addEventListener("click", () => {
+    pupupshadow.style.display = "none";
+  });
+  confirmNo.addEventListener("click", () => {
+    confirmshadow.style.display = "none";
+  });
+
+</script>
+
+<style type="text/css">
+.pupupshadow{
+   position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  #popup{
+    background: #fff;
+    color: #111;
+    width: 90%;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    margin-left: 5%;
+    margin-top: 30vh;
+  }
+
+  #popup h3{
+    text-align: center;
+  }
+  #popup p{
+    padding-left: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding-bottom: 20px;
+  }
+  #ok{
+    background: #1E2329;
+    color: white;
+    border-radius: 50px;
+    padding: 10px 40px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    font-size: 17px;
+  }
+
+
+
+
+
+
+
+
+  .confirmshadow{
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  #confirmBox{
+    background: #fff;
+  color: #111;
+  width: 90%;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  margin-left: 5%;
+  margin-top: 30vh;
+  }
+  #confirmBox h3{
+    text-align: center;
+  }
+  #confirmBox p{
+    padding-left: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding-bottom: 20px;
+  }
+  #confirmYes{
+    background: #1E2329;
+    color: white;
+    border-radius: 50px;
+    padding: 10px 30px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    font-size: 17px;
+  }
+  #confirmNo{
+    background: #FFDF3E;
+    color: black;
+    border-radius: 50px;
+    padding: 10px 30px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    font-size: 17px;
+  }
+  .menu{
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+  }
+  .menuBg{
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 100px;
+    bottom: 0;
+    background: white;
+  }
+  .menuBgBtnDiv{
+    position: fixed;
+    padding: 20px;
+    right: 0;
+    left: 100px;
+    bottom: 0;
+  }
+  #close{
+    background: #1E2329;
+    color: white;
+    border-radius: 50px;
+    padding: 20px 50px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    font-size: 17px;
+  }
+  .options{
+    width: 100%;
+/*    background: #FFDF3E;*/
+    padding: 5px 10px;
+  }
+  .options p{
+    font-size: 19px;
+    font-weight: bold;
+  }
+</style>
+<div class="menu" style="display: none;">
+  <div class="menuBg">
+    <div class="options" id="option1" onclick="resetTimer()">
+      <p>Dashboard</p>
+    </div>
+    <div class="options" id="option2" onclick="resetTimer()">
+      <p>Active Customers</p>
+    </div>
+    <div class="options" id="option3" onclick="resetTimer()">
+      <p>Pending Customer</p>
+    </div>
+    <div class="options" id="option4" onclick="resetTimer()">
+      <p>Change PASSCODE</p>
+    </div>
+    <div class="menuBgBtnDiv">
+      <center><button id="close" onclick="resetTimer()">colse menu</button></center>
+    </div>
+  </div>
+</div>
+
+<header>
+  <style type="text/css">
+    #somtel{
+      /* binance-h 2 */
+      width: 40%;
+      left: 5%;
+      margin-top: 10px;
+    }
+    #menu{
+      /* Menu */
+      width: 10%;
+      margin-left: 40%;
+      margin-top: 10px;
+    }
+    .ncustomers{
+      /* Rectangle 15 */
+      width: 45%;
+      top: 121px;
+      background: #1E2329;
+      border: 0.5px solid #E8E8E8;
+      border-radius: 9px;
+      display: inline-block;
+      padding-top: 20px;
+      padding-left: 5px;
+      padding-right: 5px;
+      padding-bottom: 10px;
+    }
+    .pending{
+      width: 45%;
+      margin-left: 2.5%;
+      top: 121px;
+      background: #1E2329;
+      border: 0.5px solid #E8E8E8;
+      border-radius: 9px;
+      display: inline-block;
+      padding-top: 20px;
+      padding-left: 5px;
+      padding-right: 5px;
+      padding-bottom: 10px;
+    }
+    .ncustomers-d, .pending-d{
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    #staff, #spinner{
+      margin-left: 5%;
+      display: inline-block;
+
+    }
+    #trueCount, #falseCount{
+      color: white;
+      font-size: 33px;
+      font-weight: bold;
+      margin-left: 40%;
+      display: inline-block;
+    }
+    .text{
+      color: white;
+      margin-left: 10px;
+    }
+    h3{
+      padding-top: 20px;
+    }
+  </style>
+  <img src="binance-h.png" id="somtel">
+  <img src="menu.png" id="menu">
+</header>
+<div class="dashboard">
+  <div class="ncustomers" id="ncustomers" onclick="resetTimer()">
+    <div class="ncustomers-d"><img src="staff.png" id="staff"><span id="trueCount">0</span></div>
+    <p class="text">Total Customers</p>
+  </div>
+  <div class="pending" id="pending" onclick="resetTimer()">
+    <div class="pending-d"><img src="spinner.png" id="spinner"><span id="falseCount">0</span></div>
+    <p class="text">Pending Customers</p>
+  </div>
+ 
+</div>
+
+<div class="customers" style="display: none;">
+<h3>Active Customers</h3>
 <table id="trueTable">
   <thead>
     <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th></tr>
   </thead>
   <tbody><tr><td colspan="4">Loading...</td></tr></tbody>
-</table>
+</table></div>
 
-<h2>FALSE Table</h2>
-<table id="falseTable">
-  <thead>
-    <tr><th>Name</th><th>Phone number</th><th>Internet number</th><th>Operator</th><th>Action</th></tr>
-  </thead>
-  <tbody><tr><td colspan="5">Loading...</td></tr></tbody>
-</table>
+<div class="pendingDisplay" style="display: block;">
+  <h3>Pending customers</h3>
+  <div id="falseContainer">Loading...</div>
+</div>
 
 <script>
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbz9RyY--TiCHrkK2VkE2OLwsvoqkiIPg4J5EtyhZUU0fdj46V3JgiUA0Jp9DAp2N0YEcA/exec";
 
+const pending = document.getElementById('pending');
+  const ncustomers = document.getElementById('ncustomers');
+  const customers = document.querySelector('.customers');
+  const pendingDisplay = document.querySelector('.pendingDisplay');
+  const menu = document.querySelector('.menu');
+  const menuIMG = document.getElementById('menu');
+  const option1 = document.getElementById('option1');
+  const option2 = document.getElementById('option2');
+  const option3 = document.getElementById('option3');
+  const option4 = document.getElementById('option4');
+  const close = document.getElementById('close');
+
+  close.addEventListener("click", () => {
+    menu.style.display = "none";
+  });
+
+  option1.addEventListener("click", () => {
+    menu.style.display = "none";
+    customers.style.display = "none";
+    pendingDisplay.style.display = "block";
+  });
+  option2.addEventListener("click", () => {
+    menu.style.display = "none";
+    customers.style.display = "block";
+    pendingDisplay.style.display = "none";
+  });
+  option3.addEventListener("click", () => {
+    menu.style.display = "none";
+    customers.style.display = "none";
+    pendingDisplay.style.display = "block";
+  });
+
+  // option4.addEventListener("click", () => {
+  //   menu.style.display = "none";
+  //   customers.style.display = "none";
+  //   pendingDisplay.style.display = "block";
+  // });
+
+
+  menuIMG.addEventListener("click", () => {
+    menu.style.display = "block";
+  });
+
+  pending.addEventListener("click", () => {
+    customers.style.display = "none";
+    pendingDisplay.style.display = "block";
+  });
+  ncustomers.addEventListener("click", () => {
+    pendingDisplay.style.display = "none";
+    customers.style.display = "block";
+  });
+
+
+
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbz9RyY--TiCHrkK2VkE2OLwsvoqkiIPg4J5EtyhZUU0fdj46V3JgiUA0Jp9DAp2N0YEcA/exec";
 let lastFalseCount = 0;
 
-// Fetch and render tables
+// Popup functions
+function showPopup(title, message) {
+  document.getElementById("popupTitle").innerText = title;
+  document.getElementById("popupMessage").innerText = message;
+  document.getElementById("popup").classList.remove("hidden");
+}
+function closePopup() { document.getElementById("popup").classList.add("hidden"); }
+
+// Custom confirm
+function confirm(message) {
+  return new Promise(resolve => {
+    const box = document.getElementById("confirmBox");
+    const msg = document.getElementById("confirmMessage");
+    const yesBtn = document.getElementById("confirmYes");
+    const noBtn = document.getElementById("confirmNo");
+    msg.textContent = message;
+    box.classList.remove("hidden");
+
+    const cleanup = () => {
+      box.classList.add("hidden");
+      yesBtn.removeEventListener("click", onYes);
+      noBtn.removeEventListener("click", onNo);
+    };
+    const onYes = () => { cleanup(); resolve(true); };
+    const onNo  = () => { cleanup(); resolve(false); };
+    yesBtn.addEventListener("click", onYes);
+    noBtn.addEventListener("click", onNo);
+  });
+}
+
+// Fetch and render
 function loadData() {
   fetch(SHEET_URL)
     .then(res => res.json())
     .then(data => {
-      if (data && Array.isArray(data)) {
-        renderTables(data);
-      } else {
-        console.error("Invalid data:", data);
-      }
+      if (data && Array.isArray(data)) renderTables(data);
+      else console.error("Invalid data:", data);
     })
     .catch(err => console.error("Fetch error:", err));
 }
@@ -63,16 +641,17 @@ function loadData() {
 // Render tables
 function renderTables(data) {
   const trueTableBody = document.querySelector("#trueTable tbody");
-  const falseTableBody = document.querySelector("#falseTable tbody");
+  const falseContainer = document.getElementById("falseContainer");
   let trueRows = 0, falseRows = 0;
 
   trueTableBody.innerHTML = "";
-  falseTableBody.innerHTML = "";
+  falseContainer.innerHTML = "";
 
   data.forEach((row, index) => {
     const status = row[row.length - 1];
     const displayRow = row.slice(0, row.length - 1);
 
+    // TRUE table
     if (status === true || status === "TRUE") {
       const tr = document.createElement("tr");
       displayRow.forEach(cell => {
@@ -83,48 +662,54 @@ function renderTables(data) {
       tr.classList.add("true-row");
       trueTableBody.appendChild(tr);
       trueRows++;
-    } else {
-      const tr = document.createElement("tr");
+    } 
+    // FALSE cards
+    else {
+      const card = document.createElement("div");
+      card.className = "false-card";
+      card.innerHTML = `
+        <p><strong>Name:</strong> ${displayRow[0]}</p>
+        <p><strong>Phone:</strong> ${displayRow[1]} <button class="copy-btn" onclick="resetTimer()">Copy Text</button></p>
+        <p><strong>Internet:</strong> ${displayRow[2]} <button class="copy-btn" onclick="resetTimer()">Copy Text</button></p>
+        <p><strong>Operator:</strong> ${displayRow[3]}</p>
+      `;
 
-      displayRow.forEach((cell, colIndex) => {
-        const td = document.createElement("td");
-        td.textContent = cell;
-
-        // Add copy buttons for Phone number and Internet number
-        if (colIndex === 1 || colIndex === 2) {
-          const copyBtn = document.createElement("button");
-          copyBtn.textContent = "Copy";
-          copyBtn.className = "copy-btn";
-          copyBtn.addEventListener("click", () => {
-            navigator.clipboard.writeText(cell).then(() => alert("Copied: " + cell));
-          });
-          td.appendChild(copyBtn);
-        }
-        tr.appendChild(td);
-      });
-
-      // Action button
-      const actionTd = document.createElement("td");
       const registerBtn = document.createElement("button");
       registerBtn.textContent = "Register";
       registerBtn.className = "register-btn";
+      registerBtn.style.marginTop = "5px";
+
+
       registerBtn.addEventListener("click", () => {
-        if (confirm(`Are you sure you want to register ${displayRow[0]}?`)) {
-          // Call Apps Script to update status in Google Sheet
-          fetch(SHEET_URL + "?action=register&row=" + (index + 2)) // +2 to skip header
+        const confirmshadow = document.querySelector('.confirmshadow');
+        confirmshadow.style.display = "block";
+      });
+
+      registerBtn.addEventListener("click", async () => {
+        const confirmed = await confirm(`Are you sure you want to register ${displayRow[0]}?`);
+        if (confirmed) {
+          fetch(SHEET_URL + "?action=register&row=" + (index + 2))
             .then(res => res.json())
             .then(() => {
-              alert(displayRow[0] + " is now registered!");
-              loadData(); // refresh the table
+              showPopup(displayRow[0], `${displayRow[0]} is registered!`);
+              loadData();
             })
             .catch(err => console.error(err));
         }
       });
-      actionTd.appendChild(registerBtn);
-      tr.appendChild(actionTd);
 
-      tr.classList.add("false-row");
-      falseTableBody.appendChild(tr);
+      card.appendChild(registerBtn);
+
+      // Copy buttons
+      const copyButtons = card.querySelectorAll(".copy-btn");
+      copyButtons.forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          const text = i === 0 ? displayRow[1] : displayRow[2];
+          navigator.clipboard.writeText(text).then(() => showPopup("Copied", text));
+        });
+      });
+
+      falseContainer.appendChild(card);
       falseRows++;
     }
   });
@@ -133,13 +718,13 @@ function renderTables(data) {
   document.getElementById("falseCount").textContent = falseRows;
 
   if (trueRows === 0) trueTableBody.innerHTML = '<tr><td colspan="4">No TRUE rows</td></tr>';
-  if (falseRows === 0) falseTableBody.innerHTML = '<tr><td colspan="5">Ma jiro qof cusub oo ku sugaya </td></tr>';
+  if (falseRows === 0) falseContainer.innerHTML = 'No users waiting to register';
 
-  // Push notification for new FALSE rows
   if (falseRows > lastFalseCount) notifyFalseRows(falseRows);
   lastFalseCount = falseRows;
 }
 
+// Notifications
 function notifyFalseRows(count) {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
@@ -151,20 +736,66 @@ function notifyFalseRows(count) {
   }
 }
 
-// Ask permission for notifications
 if ("Notification" in window && Notification.permission !== "granted") {
   Notification.requestPermission();
 }
 
-// Initial load
+// Initial load & refresh
 loadData();
-// Auto refresh every 30 seconds
 setInterval(loadData, 30000);
+
+
+
+  const changePassword = document.querySelector('.changePassword');
+  const label1 = document.getElementById('label1');
+  const label2 = document.getElementById('label2');
+  const label3 = document.getElementById('label3');
+
+  const currentPass = document.getElementById('currentPass');
+  const newPass = document.getElementById('newPass');
+  const confirmPass = document.getElementById('confirmPass');
+  const changeBtn = document.getElementById('changeBtn');
+  const closeChange = document.getElementById('closeChange');
+
+
+
+
+
+  changeBtn.addEventListener("click", () => {
+    if (currentPass.value == localStorage.getItem("passcode")) {
+      if (newPass.value == confirmPass.value) {
+        localStorage.setItem("passcode", newPass.value);
+        changePassword.style.display = "none";
+      }else{
+        label3.innerText = "they don't macth";
+        label3.style.color = "red";
+      }
+    }else{
+      label1.innerText = "incorrect passcode";
+      label1.style.color = "red";
+    }
+  });
+
+
+  newPass.addEventListener("click", () => {
+    label1.innerText = "Enter current password";
+      label1.style.color = "black";
+  });
+  confirmPass.addEventListener("click", () => {
+    label3.innerText = "Enter new password";
+      label3.style.color = "black";
+  });
+  confirmPass.addEventListener("click", () => {
+    label3.innerText = "Confirm password";
+      label3.style.color = "black";
+  });
+  option4.addEventListener("click", () => {
+    changePassword.style.display = "block";
+    menu.style.display = "none";
+  });
+  closeChange.addEventListener("click", () => {
+      changePassword.style.display = "none";
+  });
 </script>
 </body>
 </html>
-
-
-
-
-
